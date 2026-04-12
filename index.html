@@ -1219,16 +1219,10 @@ function saveToLibrary() {
   };
 
   if (db) {
+    const docId = (entry.title + (entry.artist ? '_' + entry.artist : '')).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 80);
     const fsEntry = { ...entry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    db.collection(SONGS_COLLECTION)
-      .where('title', '==', entry.title)
-      .where('artist', '==', entry.artist)
-      .get()
-      .then(snap => {
-        if (!snap.empty) snap.docs[0].ref.update(fsEntry);
-        else db.collection(SONGS_COLLECTION).add(fsEntry);
-        flashSavedBtn();
-      })
+    db.collection(SONGS_COLLECTION).doc(docId).set(fsEntry)
+      .then(() => flashSavedBtn())
       .catch(() => alert('Save failed. Check your connection.'));
   } else {
     try {
