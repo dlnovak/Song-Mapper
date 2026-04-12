@@ -811,7 +811,17 @@ let selectedId = null; // id of selected section
 
 const VAR_COLORS = { 0: 'transparent', 1: '#fff', 2: '#64c8ff', 3: '#ffdc50', 4: '#ff6496' };
 
-function setTimes(t) {
+function updateTapLabel() {
+  const label = document.querySelector('.tap-label');
+  if (!label) return;
+  if (selectedId !== null) {
+    label.textContent = 'Tap part to REASSIGN selected · ✎ to rename';
+    label.style.color = 'var(--accent)';
+  } else {
+    label.textContent = 'Parts · tap to log · ✎ to rename';
+    label.style.color = '';
+  }
+}
   if (selectedId === null) return;
   const sec = sections.find(s => s.id === selectedId);
   if (sec) {
@@ -848,6 +858,7 @@ function selectSection(id) {
   selectedId = (selectedId === id) ? null : id;
   updateVarBar();
   updateTimesBar();
+  updateTapLabel();
   renderFlow();
   renderList();
 }
@@ -899,8 +910,9 @@ document.getElementById('confirmNo').onclick = () => {
 };
 document.getElementById('confirmYes').onclick = () => {
   document.getElementById('confirmOverlay').classList.remove('open');
-  sections = []; counter = 0;
+  sections = []; counter = 0; selectedId = null;
   document.getElementById('lastTap').textContent = '';
+  updateTapLabel();
   render();
 };
 
@@ -914,12 +926,29 @@ function addPart() {
 
 function tapPart(idx) {
   const part = parts[idx];
+
+  if (selectedId !== null) {
+    // reassign selected section to new part
+    const sec = sections.find(s => s.id === selectedId);
+    if (sec) {
+      sec.partId = part.id;
+      flashBtn(idx, part.color);
+      updateVarBar();
+      updateTimesBar();
+      updateTapLabel();
+      render();
+      return;
+    }
+  }
+
+  // no selection — add new section
   sections.push({ id: ++counter, partId: part.id, variation: 0, times: 1, note: '' });
   selectedId = counter;
   document.getElementById('lastTap').textContent = `${part.name || part.id} ·${sections.length}`;
   flashBtn(idx, part.color);
   updateVarBar();
   updateTimesBar();
+  updateTapLabel();
   render();
 }
 
@@ -1129,6 +1158,8 @@ function renderBar() {
 function undoLast() {
   if (sections.length === 0) return;
   sections.pop();
+  selectedId = null;
+  updateTapLabel();
   render();
 }
 
@@ -1358,6 +1389,7 @@ function loadData() {
 renderPartButtons();
 loadData();
 render();
+updateTapLabel();
 </script>
 </body>
 </html>
