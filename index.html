@@ -859,6 +859,7 @@ function setVariation(v) {
 }
 
 function selectSection(id) {
+  if (Date.now() - reassignedAt < 500) return;
   selectedId = (selectedId === id) ? null : id;
   updateVarBar();
   updateTimesBar();
@@ -928,16 +929,18 @@ function addPart() {
   renderPartButtons();
 }
 
+let reassignedAt = 0;
+
 function tapPart(idx) {
   const part = parts[idx];
 
   if (selectedId !== null) {
-    // reassign selected section to new part
     const sec = sections.find(s => s.id === selectedId);
     if (sec) {
       sec.partId = part.id;
       flashBtn(idx, part.color);
       selectedId = null;
+      reassignedAt = Date.now();
       updateVarBar();
       updateTimesBar();
       updateTapLabel();
@@ -946,7 +949,6 @@ function tapPart(idx) {
     }
   }
 
-  // no selection — add new section
   sections.push({ id: ++counter, partId: part.id, variation: 0, times: 1, note: '' });
   selectedId = null;
   document.getElementById('lastTap').textContent = `${part.name || part.id} ·${sections.length}`;
@@ -1108,15 +1110,14 @@ function renderList() {
       <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="60" />
       <button class="list-del">✕</button>
     `;
-    row.onclick = (e) => {
+    const selectRow = (e) => {
       if (e.target.classList.contains('list-del')) return;
       if (e.target.classList.contains('list-note')) return;
+      if (e.target.classList.contains('single-var-dot')) return;
       selectSection(sec.id);
     };
-    row.querySelector('.single-var-dot').onclick = (e) => {
-      e.stopPropagation();
-      selectSection(sec.id);
-    };
+    row.addEventListener('touchstart', selectRow, { passive: true });
+    row.addEventListener('click', selectRow);
     row.querySelector('.list-note').oninput = e => {
       sec.note = e.target.value;
       renderFlow();
