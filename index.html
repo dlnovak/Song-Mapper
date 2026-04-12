@@ -822,6 +822,8 @@ function updateTapLabel() {
     label.style.color = '';
   }
 }
+
+function setTimes(t) {
   if (selectedId === null) return;
   const sec = sections.find(s => s.id === selectedId);
   if (sec) {
