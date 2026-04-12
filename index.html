@@ -30,8 +30,19 @@
     overflow: hidden;
   }
 
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .app { flex-direction: row; }
+  }
+
+  /* ── DESKTOP: centered column ── */
+  @media (min-width: 700px) {
+    .app {
+      flex-direction: column !important;
+      max-width: 580px;
+      margin: 0 auto;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
   }
 
   /* ── HEADER (portrait only) ── */
@@ -43,7 +54,7 @@
     gap: 10px;
     flex-shrink: 0;
   }
-  @media (orientation: landscape) { .app-header { display: none; } }
+  @media (orientation: landscape) and (max-height: 600px) { .app-header { display: none; } }
 
   .app-title {
     font-family: 'Space Mono', monospace;
@@ -67,7 +78,7 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .tap-zone {
       border-bottom: none;
       border-right: 1px solid var(--border);
@@ -83,7 +94,7 @@
 
   /* landscape song info */
   .ls-song-info { display: none; }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .ls-song-info {
       display: flex; flex-direction: column; gap: 4px;
       margin-bottom: 8px; padding-bottom: 8px;
@@ -96,7 +107,7 @@
     display: flex; align-items: center;
     justify-content: space-between; margin-bottom: 8px;
   }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .tap-top { margin-bottom: 8px; flex-direction: column; align-items: flex-start; gap: 3px; }
   }
 
@@ -152,7 +163,7 @@
     display: inline-flex;
     flex-shrink: 0;
   }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .part-btn-wrap { width: 100%; }
   }
 
@@ -176,7 +187,7 @@
     text-transform: uppercase; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; max-width: 56px;
   }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .part-btn {
       font-size: 15px; padding: 7px 28px 5px 8px;
       min-width: unset; width: 100%;
@@ -212,7 +223,7 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
-  @media (orientation: landscape) { .add-part-btn { width: 100%; padding: 6px 8px; } }
+  @media (orientation: landscape) and (max-height: 600px) { .add-part-btn { width: 100%; padding: 6px 8px; } }
 
   /* ── SEQUENCE ZONE ── */
   .sequence-zone {
@@ -355,13 +366,13 @@
   }
   .times-bar {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 4px;
   }
   .times-btn {
     font-family: 'Space Mono', monospace;
-    font-size: 12px; font-weight: 700;
-    height: 32px; width: 100%; padding: 0;
+    font-size: 11px; font-weight: 700;
+    height: 26px; width: 100%; padding: 0;
     border: 1px solid var(--border-bright);
     background: transparent; color: var(--muted);
     border-radius: 4px; cursor: pointer;
@@ -453,7 +464,7 @@
     border: 1px solid var(--border); border-radius: 3px;
     position: relative; overflow: hidden; flex-shrink: 0;
   }
-  @media (orientation: landscape) { .bar-timeline { display: none; } }
+  @media (orientation: landscape) and (max-height: 600px) { .bar-timeline { display: none; } }
 
   .bar-segment {
     position: absolute; top: 0; height: 100%;
@@ -468,7 +479,7 @@
   .bar-sidebar {
     display: none;
   }
-  @media (orientation: landscape) {
+  @media (orientation: landscape) and (max-height: 600px) {
     .bar-sidebar {
       display: block;
       width: 32px; flex-shrink: 0;
@@ -589,8 +600,14 @@
         <div class="times-bar" id="timesBar">
           <button class="times-btn" data-t="1"  onclick="setTimes(1)">1</button>
           <button class="times-btn" data-t="2"  onclick="setTimes(2)">2</button>
+          <button class="times-btn" data-t="3"  onclick="setTimes(3)">3</button>
           <button class="times-btn" data-t="4"  onclick="setTimes(4)">4</button>
+          <button class="times-btn" data-t="5"  onclick="setTimes(5)">5</button>
+          <button class="times-btn" data-t="6"  onclick="setTimes(6)">6</button>
+          <button class="times-btn" data-t="7"  onclick="setTimes(7)">7</button>
           <button class="times-btn" data-t="8"  onclick="setTimes(8)">8</button>
+          <button class="times-btn" data-t="9"  onclick="setTimes(9)">9</button>
+          <button class="times-btn" data-t="11" onclick="setTimes(11)">11</button>
           <button class="times-btn" data-t="16" onclick="setTimes(16)">16</button>
           <button class="times-btn" data-t="32" onclick="setTimes(32)">32</button>
         </div>
@@ -741,15 +758,19 @@ function updateVarBar() {
 // ── SONG FIELDS sync ──
 document.getElementById('songTitle').oninput = function() {
   document.getElementById('songTitleLs').value = this.value;
+  saveData();
 };
 document.getElementById('songTitleLs').oninput = function() {
   document.getElementById('songTitle').value = this.value;
+  saveData();
 };
 document.getElementById('artistName').oninput = function() {
   document.getElementById('artistNameLs').value = this.value;
+  saveData();
 };
 document.getElementById('artistNameLs').oninput = function() {
   document.getElementById('artistName').value = this.value;
+  saveData();
 };
 
 function getSongTitle() { return document.getElementById('songTitle').value.trim(); }
@@ -853,6 +874,7 @@ function render() {
   renderFlow();
   renderList();
   renderBar();
+  saveData();
 }
 
 // Flow view: compact horizontal strip of colored blocks
@@ -1031,6 +1053,7 @@ function confirmModal() {
     parts[modalPartIdx].name = document.getElementById('modalInput').value.trim();
     renderPartButtons();
     render();
+    saveData();
   }
   closeModal();
 }
@@ -1053,7 +1076,40 @@ document.addEventListener('keydown', e => {
   if (n >= 1 && n <= 9 && n <= parts.length) { e.preventDefault(); tapPart(n - 1); }
 });
 
+// ── LOCAL STORAGE ──
+function saveData() {
+  try {
+    localStorage.setItem('songmapper_sections', JSON.stringify(sections));
+    localStorage.setItem('songmapper_counter', counter);
+    localStorage.setItem('songmapper_parts', JSON.stringify(parts));
+    localStorage.setItem('songmapper_title', document.getElementById('songTitle').value);
+    localStorage.setItem('songmapper_artist', document.getElementById('artistName').value);
+  } catch(e) {}
+}
+
+function loadData() {
+  try {
+    const savedSections = localStorage.getItem('songmapper_sections');
+    const savedCounter = localStorage.getItem('songmapper_counter');
+    const savedParts = localStorage.getItem('songmapper_parts');
+    const savedTitle = localStorage.getItem('songmapper_title');
+    const savedArtist = localStorage.getItem('songmapper_artist');
+    if (savedSections) sections = JSON.parse(savedSections);
+    if (savedCounter) counter = parseInt(savedCounter);
+    if (savedParts) parts = JSON.parse(savedParts);
+    if (savedTitle) {
+      document.getElementById('songTitle').value = savedTitle;
+      document.getElementById('songTitleLs').value = savedTitle;
+    }
+    if (savedArtist) {
+      document.getElementById('artistName').value = savedArtist;
+      document.getElementById('artistNameLs').value = savedArtist;
+    }
+  } catch(e) {}
+}
+
 renderPartButtons();
+loadData();
 render();
 </script>
 </body>
