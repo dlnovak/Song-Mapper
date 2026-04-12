@@ -438,6 +438,8 @@
     padding: 6px 10px; background: var(--surface);
     border: 1px solid var(--border); border-left: 3px solid;
     border-radius: 4px; flex-shrink: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
   .list-num { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); min-width: 18px; }
   .list-badge {
@@ -1105,6 +1107,11 @@ function renderList() {
       <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="60" />
       <button class="list-del">✕</button>
     `;
+    row.onclick = (e) => {
+      if (e.target.classList.contains('list-del')) return;
+      if (e.target.classList.contains('list-note')) return;
+      selectSection(sec.id);
+    };
     row.querySelector('.single-var-dot').onclick = (e) => {
       e.stopPropagation();
       selectSection(sec.id);
