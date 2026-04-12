@@ -41,11 +41,29 @@
   @media (min-width: 700px) {
     .app {
       flex-direction: column !important;
-      max-width: 580px;
+      max-width: 600px;
       margin: 0 auto;
       border-left: 1px solid var(--border);
       border-right: 1px solid var(--border);
     }
+    .tap-zone {
+      width: auto !important;
+      min-width: unset !important;
+      border-right: none !important;
+      border-bottom: 1px solid var(--border) !important;
+      flex-direction: column !important;
+    }
+    .parts-and-controls {
+      flex-direction: row !important;
+    }
+    .part-buttons {
+      grid-template-columns: repeat(3, 1fr) !important;
+      flex-direction: unset !important;
+    }
+    .bar-sidebar { display: none !important; }
+    .bar-timeline { display: block !important; }
+    .app-header { display: flex !important; }
+    .ls-song-info { display: none !important; }
   }
 
   /* ── HEADER (portrait only) ── */
@@ -387,6 +405,20 @@
   }
   .times-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
   .times-btn:active { opacity: 0.7; }
+  .times-custom {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    height: 26px; width: 100%; padding: 0 4px;
+    border: 1px solid var(--border-bright);
+    background: transparent; color: var(--muted);
+    border-radius: 4px; text-align: center;
+    outline: none; -webkit-tap-highlight-color: transparent;
+    -moz-appearance: textfield;
+  }
+  .times-custom:focus { border-color: var(--accent); color: var(--accent); }
+  .times-custom::-webkit-outer-spin-button,
+  .times-custom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .times-custom::placeholder { color: var(--border-bright); font-size: 9px; }
 
   .done-btn {
     font-family: 'Space Mono', monospace;
@@ -659,6 +691,25 @@
   }
   .modal input:focus { border-color: var(--accent); }
   .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+    font-family: 'Space Mono', monospace;
+    font-size: 8px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .color-swatches {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .color-swatch {
+    width: 28px; height: 28px;
+    border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s;
+  }
+  .color-swatch.selected {
+    border-color: #fff;
+    transform: scale(1.2);
+  }
+  .color-swatch:active { transform: scale(0.9); }
 </style>
 </head>
 <body>
@@ -709,9 +760,9 @@
           <button class="times-btn" data-t="7"  onclick="setTimes(7)">7</button>
           <button class="times-btn" data-t="8"  onclick="setTimes(8)">8</button>
           <button class="times-btn" data-t="9"  onclick="setTimes(9)">9</button>
-          <button class="times-btn" data-t="11" onclick="setTimes(11)">11</button>
           <button class="times-btn" data-t="16" onclick="setTimes(16)">16</button>
           <button class="times-btn" data-t="32" onclick="setTimes(32)">32</button>
+          <input class="times-custom" id="timesCustom" type="number" min="1" max="999" placeholder="?" />
         </div>
         <span class="var-bar-hint" id="varBarHint">← select</span>
         <button class="done-btn" id="doneBtn" onclick="clearSelection()" style="display:none">DONE</button>
@@ -781,6 +832,8 @@
   <div class="modal">
     <h2 id="modalTitle">Rename Part</h2>
     <input type="text" id="modalInput" placeholder="e.g. Main Riff, Drop, Solo…" maxlength="24"/>
+    <div class="color-picker-label">Color</div>
+    <div class="color-swatches" id="colorSwatches"></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn primary" onclick="confirmModal()">Save</button>
@@ -868,15 +921,20 @@ function setTimes(t) {
 
 function updateTimesBar() {
   const btns = document.querySelectorAll('.times-btn');
+  const customInput = document.getElementById('timesCustom');
   if (selectedId === null) {
     btns.forEach(b => b.classList.remove('active'));
+    if (customInput) customInput.value = '';
     return;
   }
   const sec = sections.find(s => s.id === selectedId);
   if (!sec) return;
+  const t = sec.times || 1;
+  const isPreset = [1,2,3,4,5,6,7,8,9,16,32].includes(t);
   btns.forEach(b => {
-    b.classList.toggle('active', parseInt(b.dataset.t) === (sec.times || 1));
+    b.classList.toggle('active', parseInt(b.dataset.t) === t);
   });
+  if (customInput) customInput.value = isPreset ? '' : t;
 }
 
 function setVariation(v) {
@@ -998,10 +1056,34 @@ function flashBtn(idx, color) {
   setTimeout(() => btns[idx].classList.remove('flash'), 180);
 }
 
+const PALETTE = [
+  '#e84a6a','#e8944a','#e8e04a','#6ae84a','#4ae8a4','#4ac8e8',
+  '#4a6ae8','#a44ae8','#e84ac8','#e86a4a','#ffffff','#aaaaaa',
+  '#ff3333','#33ff99','#3399ff','#ff33cc'
+];
+let selectedColor = null;
+
 function renamePart(idx) {
   modalPartIdx = idx;
-  document.getElementById('modalTitle').textContent = `Rename Part ${parts[idx].id}`;
+  document.getElementById('modalTitle').textContent = `Rename Part`;
   document.getElementById('modalInput').value = parts[idx].name;
+  selectedColor = parts[idx].color;
+
+  // build swatches
+  const container = document.getElementById('colorSwatches');
+  container.innerHTML = '';
+  PALETTE.forEach(c => {
+    const sw = document.createElement('button');
+    sw.className = 'color-swatch' + (c === selectedColor ? ' selected' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      selectedColor = c;
+      container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+    };
+    container.appendChild(sw);
+  });
+
   document.getElementById('modalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('modalInput').focus(), 60);
 }
@@ -1138,7 +1220,7 @@ function renderList() {
       <span class="list-num">${i + 1}</span>
       <span class="list-badge" style="background:${color}">${part ? part.name : sec.partId}</span><span class="single-var-dot" style="${varDotStyle}"></span>
       <span class="times-label">×${sec.times || 1}</span>
-      <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="60" />
+      <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="2000" />
       <button class="list-del">✕</button>
     `;
     const selectRow = (e) => {
@@ -1236,7 +1318,8 @@ function closeModal() {
 }
 function confirmModal() {
   if (modalPartIdx !== null) {
-    parts[modalPartIdx].name = document.getElementById('modalInput').value.trim();
+    parts[modalPartIdx].name = document.getElementById('modalInput').value.trim() || parts[modalPartIdx].name;
+    if (selectedColor) parts[modalPartIdx].color = selectedColor;
     renderPartButtons();
     render();
     saveData();
@@ -1262,7 +1345,22 @@ document.addEventListener('keydown', e => {
   if (n >= 1 && n <= 9 && n <= parts.length) { e.preventDefault(); tapPart(n - 1); }
 });
 
-// ── LIBRARY ──
+// ── CUSTOM TIMES INPUT ──
+document.addEventListener('DOMContentLoaded', () => {
+  const customInput = document.getElementById('timesCustom');
+  if (customInput) {
+    customInput.addEventListener('change', () => {
+      const val = parseInt(customInput.value);
+      if (val && val > 0) setTimes(val);
+    });
+    customInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const val = parseInt(customInput.value);
+        if (val && val > 0) { setTimes(val); customInput.blur(); }
+      }
+    });
+  }
+});
 
 function flashSavedBtn() {
   const btn = document.getElementById('saveBtn');
