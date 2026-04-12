@@ -184,11 +184,14 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
   }
-  .part-btn .part-name {
-    font-size: 7px; font-weight: 400;
-    letter-spacing: 0.07em; opacity: 0.7;
-    text-transform: uppercase; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; max-width: 56px;
+  .part-name-full {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.2;
+    padding: 0 4px;
   }
   @media (orientation: landscape) and (max-height: 600px) {
     .part-btn {
@@ -385,7 +388,16 @@
   .times-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
   .times-btn:active { opacity: 0.7; }
 
-  /* times label in list row */
+  .done-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    padding: 6px 12px; letter-spacing: 0.1em;
+    border: 1px solid #6ae84a; color: #6ae84a;
+    background: transparent; border-radius: 3px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    margin-top: 4px;
+  }
+  .done-btn:active { background: #6ae84a; color: #000; }
   .times-label {
     font-family: 'Space Mono', monospace;
     font-size: 9px; font-weight: 700;
@@ -443,9 +455,11 @@
   }
   .list-num { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); min-width: 18px; }
   .list-badge {
-    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
-    padding: 2px 7px; border-radius: 2px; color: #000;
-    min-width: 26px; text-align: center; flex-shrink: 0;
+    font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 2px; color: #000;
+    text-align: center; flex-shrink: 0;
+    white-space: nowrap; letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .list-note {
     flex: 1; background: transparent; border: none;
@@ -700,6 +714,7 @@
           <button class="times-btn" data-t="32" onclick="setTimes(32)">32</button>
         </div>
         <span class="var-bar-hint" id="varBarHint">← select</span>
+        <button class="done-btn" id="doneBtn" onclick="clearSelection()" style="display:none">DONE</button>
       </div>
     </div>
   </div>
@@ -795,15 +810,15 @@ const COLORS = ['#e84a6a','#e8944a','#e8e04a','#6ae84a','#4ae8a4','#4ac8e8','#4a
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 let parts = [
-  { id:'In', name:'Intro',      color:COLORS[0] },
-  { id:'V',  name:'Verse',      color:COLORS[1] },
-  { id:'PC', name:'Pre-Ch',     color:COLORS[2] },
-  { id:'Ch', name:'Chorus',     color:COLORS[3] },
-  { id:'Br', name:'Bridge',     color:COLORS[4] },
-  { id:'Sl', name:'Solo',       color:COLORS[5] },
-  { id:'Ou', name:'Outro',      color:COLORS[6] },
-  { id:'G',  name:'Part G',     color:COLORS[7] },
-  { id:'H',  name:'Part H',     color:COLORS[8] },
+  { id:'Intro',    name:'Intro',    color:COLORS[0] },
+  { id:'Verse',    name:'Verse',    color:COLORS[1] },
+  { id:'Pre-Ch',   name:'Pre-Ch',   color:COLORS[2] },
+  { id:'Chorus',   name:'Chorus',   color:COLORS[3] },
+  { id:'Bridge',   name:'Bridge',   color:COLORS[4] },
+  { id:'Solo',     name:'Solo',     color:COLORS[5] },
+  { id:'Outro',    name:'Outro',    color:COLORS[6] },
+  { id:'Part G',   name:'Part G',   color:COLORS[7] },
+  { id:'Part H',   name:'Part H',   color:COLORS[8] },
 ];
 let sections = [];
 let counter = 0;
@@ -813,15 +828,31 @@ let selectedId = null; // id of selected section
 
 const VAR_COLORS = { 0: 'transparent', 1: '#fff', 2: '#64c8ff', 3: '#ffdc50', 4: '#ff6496' };
 
+function clearSelection() {
+  selectedId = null;
+  reassignedAt = 0;
+  updateVarBar();
+  updateTimesBar();
+  updateTapLabel();
+  renderFlow();
+  renderList();
+}
+
 function updateTapLabel() {
   const label = document.querySelector('.tap-label');
+  const doneBtn = document.getElementById('doneBtn');
+  const hint = document.getElementById('varBarHint');
   if (!label) return;
   if (selectedId !== null) {
-    label.textContent = 'Tap part to REASSIGN selected · ✎ to rename';
+    label.textContent = 'Tap part to REASSIGN · ✎ to rename';
     label.style.color = 'var(--accent)';
+    if (doneBtn) doneBtn.style.display = 'block';
+    if (hint) hint.style.display = 'none';
   } else {
     label.textContent = 'Parts · tap to log · ✎ to rename';
     label.style.color = '';
+    if (doneBtn) doneBtn.style.display = 'none';
+    if (hint) hint.style.display = 'inline';
   }
 }
 
@@ -859,7 +890,6 @@ function setVariation(v) {
 }
 
 function selectSection(id) {
-  if (Date.now() - reassignedAt < 500) return;
   selectedId = (selectedId === id) ? null : id;
   updateVarBar();
   updateTimesBar();
@@ -935,22 +965,19 @@ function tapPart(idx) {
   const part = parts[idx];
 
   if (selectedId !== null) {
+    // reassign selected section
     const sec = sections.find(s => s.id === selectedId);
     if (sec) {
       sec.partId = part.id;
       flashBtn(idx, part.color);
-      selectedId = null;
-      reassignedAt = Date.now();
-      updateVarBar();
-      updateTimesBar();
-      updateTapLabel();
       render();
       return;
     }
   }
 
+  // add new section
   sections.push({ id: ++counter, partId: part.id, variation: 0, times: 1, note: '' });
-  selectedId = null;
+  selectedId = counter;
   document.getElementById('lastTap').textContent = `${part.name || part.id} ·${sections.length}`;
   flashBtn(idx, part.color);
   updateVarBar();
@@ -986,7 +1013,7 @@ function renderPartButtons() {
     btn.className = 'part-btn';
     btn.style.borderColor = p.color;
     btn.style.color = p.color;
-    btn.innerHTML = `${p.id}<span class="part-name">${p.name}</span>`;
+    btn.innerHTML = `<span class="part-name-full">${p.name}</span>`;
     btn.onclick = () => tapPart(i);
 
     const pencil = document.createElement('button');
@@ -1053,7 +1080,7 @@ function renderFlow() {
     block.title = `Section ${i + 1}: Part ${sec.partId}${v > 1 ? ' var'+v : ''}${sec.note ? ' — '+sec.note : ''}`;
 
     block.innerHTML = `
-      <span class="flow-block-letter">${sec.partId}</span>
+      <span class="flow-block-letter">${(part ? part.name : sec.partId).substring(0,3)}</span>
       <div class="flow-block-var-strip" style="background:${stripColor}"></div>
       <button class="flow-block-del">✕</button>
     `;
@@ -1105,7 +1132,7 @@ function renderList() {
 
     row.innerHTML = `
       <span class="list-num">${i + 1}</span>
-      <span class="list-badge" style="background:${color}">${sec.partId}</span><span class="single-var-dot" style="${varDotStyle}"></span>
+      <span class="list-badge" style="background:${color}">${part ? part.name : sec.partId}</span><span class="single-var-dot" style="${varDotStyle}"></span>
       <span class="times-label">×${sec.times || 1}</span>
       <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="60" />
       <button class="list-del">✕</button>
@@ -1383,9 +1410,19 @@ function loadData() {
     const savedParts = localStorage.getItem('songmapper_parts');
     const savedTitle = localStorage.getItem('songmapper_title');
     const savedArtist = localStorage.getItem('songmapper_artist');
-    if (savedSections) sections = JSON.parse(savedSections);
+    if (savedSections) {
+      const parsed = JSON.parse(savedSections);
+      // migrate old short IDs to full names
+      const idMap = {'In':'Intro','V':'Verse','PC':'Pre-Ch','Ch':'Chorus','Br':'Bridge','Sl':'Solo','Ou':'Outro','G':'Part G','H':'Part H'};
+      parsed.forEach(s => { if (idMap[s.partId]) s.partId = idMap[s.partId]; });
+      sections = parsed;
+    }
     if (savedCounter) counter = parseInt(savedCounter);
-    if (savedParts) parts = JSON.parse(savedParts);
+    if (savedParts) {
+      const parsedParts = JSON.parse(savedParts);
+      // only restore if parts have full-name IDs already
+      if (parsedParts[0] && parsedParts[0].id.length > 2) parts = parsedParts;
+    }
     if (savedTitle) {
       document.getElementById('songTitle').value = savedTitle;
       document.getElementById('songTitleLs').value = savedTitle;
