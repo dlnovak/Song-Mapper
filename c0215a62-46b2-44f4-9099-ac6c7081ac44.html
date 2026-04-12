@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Song Mapper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0a0c;
+    --surface: #111115;
+    --border: #1e1e26;
+    --border-bright: #2e2e3e;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --accent: #e8c84a;
+    --danger: #e84a6a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  @media (orientation: landscape) {
+    .app { flex-direction: row; }
+  }
+
+  /* ── HEADER (portrait only) ── */
+  .app-header {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  @media (orientation: landscape) { .app-header { display: none; } }
+
+  .app-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; letter-spacing: 0.12em;
+    color: var(--accent); text-transform: uppercase; flex-shrink: 0;
+  }
+  .song-fields { display: flex; gap: 8px; flex: 1; min-width: 0; }
+  .song-input {
+    background: transparent; border: none;
+    border-bottom: 1px solid var(--border-bright);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; padding: 2px 4px; outline: none;
+    flex: 1; min-width: 0;
+  }
+  .song-input::placeholder { color: var(--muted); font-style: italic; }
+  .song-input:focus { border-bottom-color: var(--accent); }
+
+  /* ── TAP ZONE ── */
+  .tap-zone {
+    padding: 8px 12px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  @media (orientation: landscape) {
+    .tap-zone {
+      border-bottom: none;
+      border-right: 1px solid var(--border);
+      width: 148px;
+      min-width: 130px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+    }
+  }
+
+  /* landscape song info */
+  .ls-song-info { display: none; }
+  @media (orientation: landscape) {
+    .ls-song-info {
+      display: flex; flex-direction: column; gap: 4px;
+      margin-bottom: 8px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ls-song-info .song-input { font-size: 11px; }
+  }
+
+  .tap-top {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 8px;
+  }
+  @media (orientation: landscape) {
+    .tap-top { margin-bottom: 8px; flex-direction: column; align-items: flex-start; gap: 3px; }
+  }
+
+  .tap-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .last-tap {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--accent);
+  }
+
+  /* parts + controls side by side */
+  .parts-and-controls {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .part-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 6px;
+    flex: 0 0 calc(55% - 3px);
+    /* force square cells via aspect-ratio on the wrap */
+  }
+  .part-btn-wrap {
+    position: relative;
+    display: flex;
+    aspect-ratio: 1;
+  }
+  .side-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+    margin-left: 8px;
+    overflow: hidden;
+  }
+  .side-divider {
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── PART BUTTON — single/double tap handled in JS ── */
+  /* part button wrapper holds the tap button + pencil */
+  .part-btn-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+  @media (orientation: landscape) {
+    .part-btn-wrap { width: 100%; }
+  }
+
+  .part-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px; font-weight: 700;
+    width: 100%; height: 100%;
+    padding: 0;
+    border: 2px solid; background: transparent;
+    cursor: pointer; border-radius: 4px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px;
+    line-height: 1; position: relative;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .part-btn .part-name {
+    font-size: 7px; font-weight: 400;
+    letter-spacing: 0.07em; opacity: 0.7;
+    text-transform: uppercase; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 56px;
+  }
+  @media (orientation: landscape) {
+    .part-btn {
+      font-size: 15px; padding: 7px 28px 5px 8px;
+      min-width: unset; width: 100%;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .part-btn .part-name { display: inline; margin-top: 0; max-width: 60px; font-size: 8px; }
+  }
+  .part-btn.flash { background: var(--fc) !important; color: #000 !important; }
+
+  /* pencil rename button — sits in top-right corner of the wrap */
+  .part-rename-btn {
+    position: absolute;
+    top: 2px; right: 2px;
+    width: 20px; height: 20px;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 2px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 1;
+  }
+  .part-rename-btn:active { background: rgba(255,255,255,0.2); color: var(--accent); }
+
+  .add-part-btn {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    padding: 10px 12px; border: 2px dashed var(--border-bright);
+    background: transparent; color: var(--muted); cursor: pointer;
+    border-radius: 4px; min-width: 64px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  @media (orientation: landscape) { .add-part-btn { width: 100%; padding: 6px 8px; } }
+
+  /* ── SEQUENCE ZONE ── */
+  .sequence-zone {
+    flex: 1; min-height: 0; min-width: 0;
+    display: flex; flex-direction: column;
+    padding: 8px 14px; gap: 8px; overflow: hidden;
+  }
+
+  .seq-header {
+    display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .seq-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .seq-right { display: flex; align-items: center; gap: 5px; }
+
+  .view-toggle { display: flex; gap: 3px; }
+  .view-btn {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    padding: 4px 8px; border: 1px solid var(--border-bright);
+    background: transparent; color: var(--muted); cursor: pointer;
+    border-radius: 3px; letter-spacing: 0.07em;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .view-btn.active { background: var(--border-bright); color: var(--text); }
+
+  .btn {
+    font-family: 'Space Mono', monospace; font-size: 9px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 10px; border: 1px solid var(--border-bright);
+    background: transparent; color: var(--text); cursor: pointer;
+    border-radius: 3px; -webkit-tap-highlight-color: transparent;
+  }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+  /* ── FLOW VIEW: single horizontal scrolling strip ── */
+  .flow-view {
+    flex: 1; min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .flow-strip-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0;
+    /* hide scrollbar but allow scrolling */
+    scrollbar-width: none;
+  }
+  .flow-strip-wrap::-webkit-scrollbar { display: none; }
+
+  .flow-strip {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+    width: max-content;
+    min-height: 44px;
+  }
+
+  .list-row-selected { border-left-color: #fff !important; background: #1a1a20 !important; }
+
+  /* flow block — shorter now no dots inside */
+  .flow-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 44px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 3px 0;
+  }
+  .flow-block-letter {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: #000; line-height: 1;
+  }
+  /* thin color strip at bottom of block shows variation */
+  .flow-block-var-strip {
+    width: 28px; height: 4px;
+    border-radius: 2px;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .flow-block.selected {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+  }
+  .flow-block-del {
+    position: absolute; top: -1px; right: -1px;
+    background: rgba(0,0,0,0.6); color: #fff; border: none;
+    font-size: 7px; padding: 2px 3px; cursor: pointer;
+    opacity: 0; line-height: 1; border-radius: 0 0 0 3px;
+  }
+  .flow-block:hover .flow-block-del { opacity: 1; }
+
+  /* ── VARIATION + TIMES CONTROLS ── */
+  .var-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .var-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 7px; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; flex-shrink: 0;
+  }
+  .var-bar-dot {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0; flex-shrink: 0;
+    opacity: 0.3;
+    transition: opacity 0.1s;
+  }
+  .var-bar-dot[data-v="0"] { background: transparent; border: 2px solid var(--border-bright); opacity: 0.6; }
+  .var-bar-dot[data-v="0"].active { border-color: #fff; opacity: 1; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
+  .var-bar-dot[data-v="1"] { background: #fff; }
+  .var-bar-dot[data-v="2"] { background: #64c8ff; }
+  .var-bar-dot[data-v="3"] { background: #ffdc50; }
+  .var-bar-dot[data-v="4"] { background: #ff6496; }
+  .var-bar-dot.active { opacity: 1; box-shadow: 0 0 0 2px rgba(255,255,255,0.25); }
+  .var-bar-dot:active { opacity: 0.6; }
+  .var-bar-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 7px; color: var(--muted); font-style: italic;
+  }
+  .times-bar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+  }
+  .times-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px; font-weight: 700;
+    height: 32px; width: 100%; padding: 0;
+    border: 1px solid var(--border-bright);
+    background: transparent; color: var(--muted);
+    border-radius: 4px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    text-align: center; transition: all 0.1s;
+  }
+  .times-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .times-btn:active { opacity: 0.7; }
+
+  /* times label in list row */
+  .times-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    min-width: 24px;
+  }
+  .single-var-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-block;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+  }
+  .list-row-selected .single-var-dot {
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+  }
+  .flow-block-del {
+    position: absolute; top: -1px; right: -1px;
+    background: rgba(0,0,0,0.6); color: #fff; border: none;
+    font-size: 7px; padding: 2px 3px; cursor: pointer;
+    opacity: 0; line-height: 1; border-radius: 0 0 0 3px;
+  }
+  .flow-block:hover .flow-block-del { opacity: 1; }
+
+  .flow-sep {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--border-bright);
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    color: var(--muted); font-size: 12px; font-style: italic;
+    padding: 16px 0;
+  }
+
+  /* ── LIST VIEW ── */
+  .list-view {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; gap: 3px;
+    overflow-y: auto; overflow-x: hidden;
+  }
+  .list-view::-webkit-scrollbar { width: 3px; }
+  .list-view::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  .list-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; background: var(--surface);
+    border: 1px solid var(--border); border-left: 3px solid;
+    border-radius: 4px; flex-shrink: 0;
+  }
+  .list-num { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); min-width: 18px; }
+  .list-badge {
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    padding: 2px 7px; border-radius: 2px; color: #000;
+    min-width: 26px; text-align: center; flex-shrink: 0;
+  }
+  .list-note {
+    flex: 1; background: transparent; border: none;
+    border-bottom: 1px solid transparent; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 12px;
+    padding: 2px 4px; outline: none; min-width: 0;
+  }
+  .list-note:focus { border-bottom-color: var(--border-bright); }
+  .list-note::placeholder { color: var(--muted); font-style: italic; }
+  .list-del {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 11px; padding: 2px 3px;
+    opacity: 0; flex-shrink: 0;
+  }
+  .list-row:hover .list-del { opacity: 1; }
+  .list-del:hover { color: var(--danger); }
+
+  /* ── BAR TIMELINE ── */
+  .bar-timeline {
+    height: 32px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 3px;
+    position: relative; overflow: hidden; flex-shrink: 0;
+  }
+  @media (orientation: landscape) { .bar-timeline { display: none; } }
+
+  .bar-segment {
+    position: absolute; top: 0; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700;
+    color: #000; overflow: hidden;
+    border-right: 1px solid rgba(0,0,0,0.12);
+  }
+  .bar-segment span { pointer-events: none; }
+
+  /* landscape vertical bar */
+  .bar-sidebar {
+    display: none;
+  }
+  @media (orientation: landscape) {
+    .bar-sidebar {
+      display: block;
+      width: 32px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      position: relative; overflow: hidden;
+    }
+  }
+  .bar-seg-v {
+    position: absolute; left: 0; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace; font-size: 8px; font-weight: 700;
+    color: #000; overflow: hidden;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+  }
+
+  /* ── EXPORT OVERLAY ── */
+  .export-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    z-index: 150; padding: 20px;
+  }
+  .export-overlay.open { display: flex; }
+  .export-overlay-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px; flex-shrink: 0;
+  }
+  .export-overlay-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .export-output {
+    font-family: 'Space Mono', monospace; font-size: 15px;
+    color: var(--text); line-height: 2.2;
+    white-space: pre; flex: 1; overflow-y: auto;
+  }
+
+  /* ── CONFIRM dialog ── */
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center; z-index: 200;
+  }
+  .confirm-overlay.open { display: flex; }
+  .confirm-box {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 6px; padding: 22px; width: 260px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .confirm-box p {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    color: var(--text); line-height: 1.6;
+  }
+  .confirm-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── RENAME modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 6px; padding: 20px; width: 290px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .modal h2 {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent);
+  }
+  .modal input {
+    background: var(--bg); border: 1px solid var(--border-bright);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; padding: 8px 12px; border-radius: 3px; outline: none; width: 100%;
+  }
+  .modal input:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- portrait header -->
+  <div class="app-header">
+    <span class="app-title">Song Mapper</span>
+    <div class="song-fields">
+      <input class="song-input" id="songTitle" placeholder="Song title…" maxlength="60" />
+      <input class="song-input" id="artistName" placeholder="Artist…" maxlength="60" style="max-width:130px" />
+    </div>
+  </div>
+
+  <!-- tap zone -->
+  <div class="tap-zone">
+    <div class="ls-song-info">
+      <input class="song-input" id="songTitleLs" placeholder="Song title…" maxlength="60" />
+      <input class="song-input" id="artistNameLs" placeholder="Artist…" maxlength="60" />
+    </div>
+    <div class="tap-top">
+      <span class="tap-label">Parts · tap to log · ✎ to rename</span>
+      <span class="last-tap" id="lastTap"></span>
+    </div>
+    <div class="parts-and-controls">
+      <div class="part-buttons" id="partButtons"></div>
+      <div class="side-controls">
+        <div class="var-bar" id="varBar">
+          <span class="var-bar-label">VAR</span>
+          <button class="var-bar-dot var-bar-dot-none" data-v="0" onclick="setVariation(0)"></button>
+          <button class="var-bar-dot" data-v="1" onclick="setVariation(1)"></button>
+          <button class="var-bar-dot" data-v="2" onclick="setVariation(2)"></button>
+          <button class="var-bar-dot" data-v="3" onclick="setVariation(3)"></button>
+          <button class="var-bar-dot" data-v="4" onclick="setVariation(4)"></button>
+        </div>
+        <div class="side-divider"></div>
+        <span class="var-bar-label">TIMES</span>
+        <div class="times-bar" id="timesBar">
+          <button class="times-btn" data-t="1"  onclick="setTimes(1)">1</button>
+          <button class="times-btn" data-t="2"  onclick="setTimes(2)">2</button>
+          <button class="times-btn" data-t="4"  onclick="setTimes(4)">4</button>
+          <button class="times-btn" data-t="8"  onclick="setTimes(8)">8</button>
+          <button class="times-btn" data-t="16" onclick="setTimes(16)">16</button>
+          <button class="times-btn" data-t="32" onclick="setTimes(32)">32</button>
+        </div>
+        <span class="var-bar-hint" id="varBarHint">← select</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- sequence zone -->
+  <div class="sequence-zone">
+    <div class="seq-header">
+      <span class="seq-label">Structure · <span id="sectionCount">0</span> sections</span>
+      <div class="seq-right">
+        <div class="view-toggle">
+          <button class="view-btn" id="btnFlow" onclick="setView('flow')">FLOW</button>
+          <button class="view-btn active" id="btnList" onclick="setView('list')">LIST</button>
+        </div>
+        <button class="btn" onclick="undoLast()">UNDO</button>
+        <button class="btn primary" onclick="exportStructure()">EXPORT</button>
+        <button class="btn danger" id="clearBtn">CLEAR</button>
+      </div>
+    </div>
+
+    <div id="flowView" class="flow-view" style="display:none">
+      <div class="empty-state">Tap a part to start mapping.</div>
+    </div>
+    <div id="listView" class="list-view"></div>
+
+    <div class="bar-timeline" id="barTimeline"></div>
+  </div>
+
+  <div class="bar-sidebar" id="barSidebar"></div>
+
+</div>
+
+<!-- export overlay -->
+<div class="export-overlay" id="exportOverlay">
+  <div class="export-overlay-header">
+    <span class="export-overlay-title">Song Map</span>
+    <button class="btn" onclick="document.getElementById('exportOverlay').classList.remove('open')">CLOSE</button>
+  </div>
+  <pre class="export-output" id="exportOutput"></pre>
+</div>
+
+<!-- confirm -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p>Clear all sections?</p>
+    <div class="confirm-btns">
+      <button class="btn" id="confirmNo">Cancel</button>
+      <button class="btn danger" id="confirmYes">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- rename modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Rename Part</h2>
+    <input type="text" id="modalInput" placeholder="e.g. Main Riff, Drop, Solo…" maxlength="24"/>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="confirmModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#e84a6a','#e8944a','#e8e04a','#6ae84a','#4ae8a4','#4ac8e8','#4a6ae8','#a44ae8','#e84ac8','#e86a4a'];
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+let parts = [
+  { id:'In', name:'Intro',      color:COLORS[0] },
+  { id:'V',  name:'Verse',      color:COLORS[1] },
+  { id:'PC', name:'Pre-Ch',     color:COLORS[2] },
+  { id:'Ch', name:'Chorus',     color:COLORS[3] },
+  { id:'Br', name:'Bridge',     color:COLORS[4] },
+  { id:'Sl', name:'Solo',       color:COLORS[5] },
+  { id:'Ou', name:'Outro',      color:COLORS[6] },
+  { id:'G',  name:'Part G',     color:COLORS[7] },
+  { id:'H',  name:'Part H',     color:COLORS[8] },
+];
+let sections = [];
+let counter = 0;
+let currentView = 'list';
+let modalPartIdx = null;
+let selectedId = null; // id of selected section
+
+const VAR_COLORS = { 0: 'transparent', 1: '#fff', 2: '#64c8ff', 3: '#ffdc50', 4: '#ff6496' };
+
+function setTimes(t) {
+  if (selectedId === null) return;
+  const sec = sections.find(s => s.id === selectedId);
+  if (sec) {
+    sec.times = t;
+    updateTimesBar();
+    render();
+  }
+}
+
+function updateTimesBar() {
+  const btns = document.querySelectorAll('.times-btn');
+  if (selectedId === null) {
+    btns.forEach(b => b.classList.remove('active'));
+    return;
+  }
+  const sec = sections.find(s => s.id === selectedId);
+  if (!sec) return;
+  btns.forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.t) === (sec.times || 1));
+  });
+}
+
+function setVariation(v) {
+  if (selectedId === null) return;
+  const sec = sections.find(s => s.id === selectedId);
+  if (sec) {
+    sec.variation = v;
+    updateVarBar();
+    render();
+  }
+}
+
+function selectSection(id) {
+  selectedId = (selectedId === id) ? null : id;
+  updateVarBar();
+  updateTimesBar();
+  renderFlow();
+  renderList();
+}
+
+function updateVarBar() {
+  const dots = document.querySelectorAll('.var-bar-dot');
+  const hint = document.getElementById('varBarHint');
+  if (selectedId === null) {
+    dots.forEach(d => d.classList.remove('active'));
+    if (hint) hint.textContent = 'tap a section to select';
+    return;
+  }
+  const sec = sections.find(s => s.id === selectedId);
+  if (!sec) return;
+  if (hint) hint.textContent = '';
+  dots.forEach(d => {
+    d.classList.toggle('active', parseInt(d.dataset.v) === (sec.variation ?? 0));
+  });
+}
+
+// ── SONG FIELDS sync ──
+document.getElementById('songTitle').oninput = function() {
+  document.getElementById('songTitleLs').value = this.value;
+};
+document.getElementById('songTitleLs').oninput = function() {
+  document.getElementById('songTitle').value = this.value;
+};
+document.getElementById('artistName').oninput = function() {
+  document.getElementById('artistNameLs').value = this.value;
+};
+document.getElementById('artistNameLs').oninput = function() {
+  document.getElementById('artistName').value = this.value;
+};
+
+function getSongTitle() { return document.getElementById('songTitle').value.trim(); }
+function getArtist() { return document.getElementById('artistName').value.trim(); }
+
+// ── CONFIRM ──
+document.getElementById('clearBtn').onclick = () => {
+  if (sections.length === 0) return;
+  document.getElementById('confirmOverlay').classList.add('open');
+};
+document.getElementById('confirmNo').onclick = () => {
+  document.getElementById('confirmOverlay').classList.remove('open');
+};
+document.getElementById('confirmYes').onclick = () => {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  sections = []; counter = 0;
+  document.getElementById('lastTap').textContent = '';
+  render();
+};
+
+// ── PARTS ──
+function addPart() {
+  if (parts.length >= 9) return;
+  const idx = parts.length;
+  parts.push({ id: LETTERS[idx], name: 'Part ' + LETTERS[idx], color: COLORS[idx % COLORS.length] });
+  renderPartButtons();
+}
+
+function tapPart(idx) {
+  const part = parts[idx];
+  sections.push({ id: ++counter, partId: part.id, variation: 0, times: 1, note: '' });
+  selectedId = counter;
+  document.getElementById('lastTap').textContent = `${part.name || part.id} ·${sections.length}`;
+  flashBtn(idx, part.color);
+  updateVarBar();
+  updateTimesBar();
+  render();
+}
+
+function flashBtn(idx, color) {
+  const btns = document.querySelectorAll('.part-btn');
+  if (!btns[idx]) return;
+  btns[idx].style.setProperty('--fc', color);
+  btns[idx].classList.add('flash');
+  setTimeout(() => btns[idx].classList.remove('flash'), 180);
+}
+
+function renamePart(idx) {
+  modalPartIdx = idx;
+  document.getElementById('modalTitle').textContent = `Rename Part ${parts[idx].id}`;
+  document.getElementById('modalInput').value = parts[idx].name;
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('modalInput').focus(), 60);
+}
+
+function renderPartButtons() {
+  const c = document.getElementById('partButtons');
+  c.innerHTML = '';
+  parts.forEach((p, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'part-btn-wrap';
+
+    const btn = document.createElement('button');
+    btn.className = 'part-btn';
+    btn.style.borderColor = p.color;
+    btn.style.color = p.color;
+    btn.innerHTML = `${p.id}<span class="part-name">${p.name}</span>`;
+    btn.onclick = () => tapPart(i);
+
+    const pencil = document.createElement('button');
+    pencil.className = 'part-rename-btn';
+    pencil.innerHTML = '✎';
+    pencil.title = 'Rename';
+    pencil.onclick = (e) => { e.stopPropagation(); renamePart(i); };
+
+    wrap.appendChild(btn);
+    wrap.appendChild(pencil);
+    c.appendChild(wrap);
+  });
+
+  if (parts.length < 9) {
+    const add = document.createElement('button');
+    add.className = 'add-part-btn';
+    add.textContent = '+ Part';
+    add.onclick = addPart;
+    c.appendChild(add);
+  }
+}
+
+// ── VIEWS ──
+function setView(v) {
+  currentView = v;
+  document.getElementById('flowView').style.display = v === 'flow' ? 'flex' : 'none';
+  document.getElementById('listView').style.display = v === 'list' ? 'flex' : 'none';
+  document.getElementById('btnFlow').classList.toggle('active', v === 'flow');
+  document.getElementById('btnList').classList.toggle('active', v === 'list');
+}
+
+function render() {
+  document.getElementById('sectionCount').textContent = sections.length;
+  renderFlow();
+  renderList();
+  renderBar();
+}
+
+// Flow view: compact horizontal strip of colored blocks
+function renderFlow() {
+  const v = document.getElementById('flowView');
+  if (sections.length === 0) {
+    v.innerHTML = '<div class="empty-state">Tap a part to start mapping.</div>';
+    return;
+  }
+
+  v.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'flow-strip-wrap';
+  const strip = document.createElement('div');
+  strip.className = 'flow-strip';
+
+  sections.forEach((sec, i) => {
+    const part = parts.find(p => p.id === sec.partId);
+    const color = part ? part.color : '#888';
+    const v = sec.variation ?? 0;
+    const stripColor = v === 0 ? 'transparent' : VAR_COLORS[v];
+    const isSelected = sec.id === selectedId;
+
+    const block = document.createElement('div');
+    block.className = 'flow-block' + (isSelected ? ' selected' : '');
+    block.style.background = color;
+    block.title = `Section ${i + 1}: Part ${sec.partId}${v > 1 ? ' var'+v : ''}${sec.note ? ' — '+sec.note : ''}`;
+
+    block.innerHTML = `
+      <span class="flow-block-letter">${sec.partId}</span>
+      <div class="flow-block-var-strip" style="background:${stripColor}"></div>
+      <button class="flow-block-del">✕</button>
+    `;
+
+    block.onclick = (e) => {
+      if (e.target.classList.contains('flow-block-del')) return;
+      selectSection(sec.id);
+    };
+
+    block.querySelector('.flow-block-del').onclick = (e) => {
+      e.stopPropagation();
+      if (selectedId === sec.id) selectedId = null;
+      sections = sections.filter(s => s.id !== sec.id);
+      updateVarBar();
+      render();
+    };
+
+    strip.appendChild(block);
+
+    if (i < sections.length - 1) {
+      const sep = document.createElement('span');
+      sep.className = 'flow-sep';
+      sep.textContent = '·';
+      strip.appendChild(sep);
+    }
+  });
+
+  wrap.appendChild(strip);
+  v.appendChild(wrap);
+
+  // auto-scroll to end
+  wrap.scrollLeft = wrap.scrollWidth;
+}
+
+function renderList() {
+  const v2 = document.getElementById('listView');
+  v2.innerHTML = '';
+  sections.forEach((sec, i) => {
+    const part = parts.find(p => p.id === sec.partId);
+    const color = part ? part.color : '#888';
+    const v = sec.variation ?? 0;
+    const row = document.createElement('div');
+    row.className = 'list-row' + (sec.id === selectedId ? ' list-row-selected' : '');
+    row.style.borderLeftColor = color;
+
+    const varDotStyle = (sec.variation ?? 0) === 0
+      ? `background:transparent; border:1.5px solid rgba(255,255,255,0.2);`
+      : `background:${VAR_COLORS[sec.variation]};`;
+
+    row.innerHTML = `
+      <span class="list-num">${i + 1}</span>
+      <span class="list-badge" style="background:${color}">${sec.partId}</span><span class="single-var-dot" style="${varDotStyle}"></span>
+      <span class="times-label">×${sec.times || 1}</span>
+      <input class="list-note" value="${sec.note.replace(/"/g,'&quot;')}" placeholder="note…" maxlength="60" />
+      <button class="list-del">✕</button>
+    `;
+    row.querySelector('.single-var-dot').onclick = (e) => {
+      e.stopPropagation();
+      selectSection(sec.id);
+    };
+    row.querySelector('.list-note').oninput = e => {
+      sec.note = e.target.value;
+      renderFlow();
+      renderBar();
+    };
+    row.querySelector('.list-del').onclick = (e) => {
+      e.stopPropagation();
+      if (selectedId === sec.id) { selectedId = null; updateVarBar(); }
+      sections = sections.filter(s => s.id !== sec.id);
+      render();
+    };
+    v2.appendChild(row);
+  });
+  v2.scrollTop = v2.scrollHeight;
+}
+
+function renderBar() {
+  const bar = document.getElementById('barTimeline');
+  bar.innerHTML = '';
+  const sidebar = document.getElementById('barSidebar');
+  sidebar.innerHTML = '';
+  if (sections.length === 0) return;
+  const total = sections.length;
+
+  sections.forEach((sec, i) => {
+    const part = parts.find(p => p.id === sec.partId);
+    const color = part ? part.color : '#888';
+    const pct = (1 / total * 100);
+
+    const seg = document.createElement('div');
+    seg.className = 'bar-segment';
+    seg.style.left = (i / total * 100) + '%';
+    seg.style.width = pct + '%';
+    seg.style.background = color;
+    seg.title = sec.note ? `${sec.partId}: ${sec.note}` : sec.partId;
+    seg.innerHTML = total <= 50 ? `<span>${sec.partId}</span>` : '';
+    bar.appendChild(seg);
+
+    const vseg = document.createElement('div');
+    vseg.className = 'bar-seg-v';
+    vseg.style.top = (i / total * 100) + '%';
+    vseg.style.height = pct + '%';
+    vseg.style.background = color;
+    vseg.textContent = total <= 60 ? sec.partId : '';
+    sidebar.appendChild(vseg);
+  });
+}
+
+function undoLast() {
+  if (sections.length === 0) return;
+  sections.pop();
+  render();
+}
+
+function exportStructure() {
+  if (sections.length === 0) return;
+  const out = document.getElementById('exportOutput');
+  const title = getSongTitle();
+  const artist = getArtist();
+
+  let text = '';
+  if (title) text += title + '\n';
+  if (artist) text += artist + '\n';
+  if (title || artist) text += '\n';
+
+  sections.forEach(s => {
+    const part = parts.find(p => p.id === s.partId);
+    const name = part ? part.name : s.partId;
+    const varStr = (s.variation && s.variation > 0) ? ` VAR ${s.variation}` : '';
+    const timesStr = ` ×${s.times || 1}`;
+    const noteStr = s.note ? `  — ${s.note}` : '';
+    text += `${name}${varStr}${timesStr}${noteStr}\n`;
+  });
+
+  out.textContent = text;
+  document.getElementById('exportOverlay').classList.add('open');
+}
+
+// ── MODAL ──
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  modalPartIdx = null;
+}
+function confirmModal() {
+  if (modalPartIdx !== null) {
+    parts[modalPartIdx].name = document.getElementById('modalInput').value.trim();
+    renderPartButtons();
+    render();
+  }
+  closeModal();
+}
+document.getElementById('modalInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmModal();
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  if (document.getElementById('modalOverlay').classList.contains('open')) return;
+  if (document.getElementById('confirmOverlay').classList.contains('open')) return;
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); undoLast(); return; }
+  if (e.key === '0') { addPart(); return; }
+  const n = parseInt(e.key);
+  if (n >= 1 && n <= 9 && n <= parts.length) { e.preventDefault(); tapPart(n - 1); }
+});
+
+renderPartButtons();
+render();
+</script>
+</body>
+</html>
