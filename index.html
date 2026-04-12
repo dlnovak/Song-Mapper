@@ -947,6 +947,10 @@ document.getElementById('confirmYes').onclick = () => {
   document.getElementById('confirmOverlay').classList.remove('open');
   sections = []; counter = 0; selectedId = null;
   document.getElementById('lastTap').textContent = '';
+  document.getElementById('songTitle').value = '';
+  document.getElementById('songTitleLs').value = '';
+  document.getElementById('artistName').value = '';
+  document.getElementById('artistNameLs').value = '';
   updateTapLabel();
   render();
 };
