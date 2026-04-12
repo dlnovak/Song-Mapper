@@ -937,6 +937,7 @@ function tapPart(idx) {
     if (sec) {
       sec.partId = part.id;
       flashBtn(idx, part.color);
+      selectedId = null;
       updateVarBar();
       updateTimesBar();
       updateTapLabel();
@@ -947,7 +948,7 @@ function tapPart(idx) {
 
   // no selection — add new section
   sections.push({ id: ++counter, partId: part.id, variation: 0, times: 1, note: '' });
-  selectedId = counter;
+  selectedId = null;
   document.getElementById('lastTap').textContent = `${part.name || part.id} ·${sections.length}`;
   flashBtn(idx, part.color);
   updateVarBar();
