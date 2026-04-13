@@ -7,6 +7,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -629,6 +630,65 @@
     opacity: 0; transition: opacity 0.3s;
   }
   .save-feedback.show { opacity: 1; }
+  /* ── SIGN IN OVERLAY ── */
+  .signin-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; z-index: 300;
+  }
+  .signin-overlay.hidden { display: none; }
+  .signin-box {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    padding: 40px 32px; background: var(--surface);
+    border: 1px solid var(--border-bright); border-radius: 12px; width: 300px;
+  }
+  .signin-title {
+    font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+    letter-spacing: 0.12em; color: var(--accent);
+  }
+  .signin-sub {
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--muted); text-align: center; line-height: 1.5;
+  }
+  .signin-btn {
+    display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+    background: #fff; color: #333; border: none; border-radius: 6px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; width: 100%; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .signin-btn:active { background: #f0f0f0; }
+
+  /* ── SHARE OVERLAY ── */
+  .share-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center; z-index: 200;
+  }
+  .share-overlay.open { display: flex; }
+  .share-box {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 24px; width: 320px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .share-title {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent);
+  }
+  .share-desc { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); }
+  .share-link-row { display: flex; gap: 8px; }
+  .share-link-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border-bright);
+    color: var(--muted); font-family: 'Space Mono', monospace;
+    font-size: 10px; padding: 8px 10px; border-radius: 3px; outline: none; min-width: 0;
+  }
+  .share-note { font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .share-btns { display: flex; justify-content: flex-end; }
+  .library-share-btn {
+    font-family: 'Space Mono', monospace; font-size: 9px; padding: 6px 10px;
+    border: 1px solid var(--muted); background: transparent; color: var(--muted);
+    border-radius: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .library-share-btn:active { border-color: var(--accent); color: var(--accent); }
+
   .export-overlay {
     position: fixed; inset: 0;
     background: var(--bg);
@@ -725,6 +785,7 @@
     </div>
     <button class="btn" id="libraryBtn" onclick="openLibrary()" style="flex-shrink:0">LIB</button>
     <button class="btn primary" id="saveBtn" onclick="saveToLibrary()" style="flex-shrink:0">SAVE</button>
+    <button class="btn" id="signoutBtn" onclick="signOut()" style="flex-shrink:0;display:none;font-size:14px" title="Sign out">↪</button>
   </div>
 
   <!-- tap zone -->
@@ -797,6 +858,34 @@
 
 </div>
 
+<!-- sign-in overlay -->
+<div class="signin-overlay" id="signinOverlay">
+  <div class="signin-box">
+    <div class="signin-title">SONG MAPPER</div>
+    <div class="signin-sub">Sign in to save your song library</div>
+    <button class="signin-btn" id="signinBtn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+  </div>
+</div>
+
+<!-- share overlay -->
+<div class="share-overlay" id="shareOverlay">
+  <div class="share-box">
+    <h2 class="share-title">Share Song</h2>
+    <p class="share-desc" id="shareDesc"></p>
+    <div class="share-link-row">
+      <input class="share-link-input" id="shareLinkInput" readonly />
+      <button class="btn primary" id="shareCopyBtn" onclick="copyShareLink()">COPY</button>
+    </div>
+    <p class="share-note">Send this link to anyone. They open it and tap Accept to add it to their library.</p>
+    <div class="share-btns">
+      <button class="btn" onclick="closeShare()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
 <!-- export overlay -->
 <div class="export-overlay" id="exportOverlay">
   <div class="export-overlay-header">
@@ -844,7 +933,10 @@
 <script>
 // ── FIREBASE INIT ──
 let db = null;
+let auth = null;
+let currentUser = null;
 const SONGS_COLLECTION = 'songs';
+
 try {
   firebase.initializeApp({
     apiKey: "AIzaSyAw39K_DI014PdT252u6QOwckcsf_p4MRw",
@@ -855,9 +947,46 @@ try {
     appId: "1:517873571739:web:f184ebf817e90f8dd6733e"
   });
   db = firebase.firestore();
+  auth = firebase.auth();
+
+  // Listen for auth state
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('signinOverlay').classList.add('hidden');
+      document.getElementById('signoutBtn').style.display = 'inline-flex';
+      // Check for share import
+      checkShareImport();
+      loadData();
+      render();
+    } else {
+      currentUser = null;
+      document.getElementById('signinOverlay').classList.remove('hidden');
+      document.getElementById('signoutBtn').style.display = 'none';
+    }
+  });
 } catch(e) {
   console.warn('Firebase not available, using local storage only.');
+  document.getElementById('signinOverlay').classList.add('hidden');
 }
+
+// ── AUTH ──
+function signInWithGoogle() {
+  if (!auth) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    console.error('Sign in failed:', err);
+    alert('Sign in failed. Please try again.');
+  });
+}
+
+function signOut() {
+  if (!auth) return;
+  if (!confirm('Sign out?')) return;
+  auth.signOut();
+}
+
+document.getElementById('signinBtn').onclick = signInWithGoogle;
 
 const COLORS = ['#e84a6a','#e8944a','#e8e04a','#6ae84a','#4ae8a4','#4ac8e8','#4a6ae8','#a44ae8','#e84ac8','#e86a4a'];
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -1362,6 +1491,61 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// ── USER-SCOPED COLLECTION ──
+function userSongsRef() {
+  if (!db || !currentUser) return null;
+  return db.collection('users').doc(currentUser.uid).collection('songs');
+}
+
+// ── SHARE SYSTEM ──
+function checkShareImport() {
+  const params = new URLSearchParams(window.location.search);
+  const shareId = params.get('import');
+  if (!shareId || !db) return;
+  db.collection('shared').doc(shareId).get().then(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+    if (!confirm(`Accept "${data.title}"${data.artist ? ' by ' + data.artist : ''} into your library?`)) return;
+    const ref = userSongsRef();
+    if (!ref) return;
+    const docId = (data.title + (data.artist ? '_' + data.artist : '')).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 80);
+    ref.doc(docId).set({ ...data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+      .then(() => {
+        alert(`"${data.title}" added to your library!`);
+        window.history.replaceState({}, '', window.location.pathname);
+      });
+  }).catch(err => console.error('Share import failed:', err));
+}
+
+function shareFromLibrary(entry) {
+  if (!db) return;
+  const shareData = {
+    title: entry.title, artist: entry.artist || '',
+    sections: entry.sections, parts: entry.parts,
+    savedAt: new Date().toISOString(),
+    sharedBy: currentUser ? (currentUser.displayName || currentUser.email) : 'Unknown'
+  };
+  db.collection('shared').add(shareData).then(docRef => {
+    const url = `${window.location.origin}${window.location.pathname}?import=${docRef.id}`;
+    document.getElementById('shareDesc').textContent = `"${entry.title}"${entry.artist ? ' — ' + entry.artist : ''}`;
+    document.getElementById('shareLinkInput').value = url;
+    document.getElementById('shareOverlay').classList.add('open');
+  }).catch(() => alert('Share failed.'));
+}
+
+function copyShareLink() {
+  const input = document.getElementById('shareLinkInput');
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('shareCopyBtn');
+    btn.textContent = 'COPIED ✓';
+    setTimeout(() => btn.textContent = 'COPY', 2000);
+  }).catch(() => { input.select(); document.execCommand('copy'); });
+}
+
+function closeShare() {
+  document.getElementById('shareOverlay').classList.remove('open');
+}
+
 function flashSavedBtn() {
   const btn = document.getElementById('saveBtn');
   btn.textContent = 'SAVED ✓';
@@ -1389,10 +1573,10 @@ function saveToLibrary() {
     savedAt: new Date().toISOString()
   };
 
-  if (db) {
+  const ref = userSongsRef();
+  if (ref) {
     const docId = (entry.title + (entry.artist ? '_' + entry.artist : '')).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 80);
-    const fsEntry = { ...entry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-    db.collection(SONGS_COLLECTION).doc(docId).set(fsEntry)
+    ref.doc(docId).set({ ...entry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
       .then(() => flashSavedBtn())
       .catch(() => alert('Save failed. Check your connection.'));
   } else {
@@ -1415,10 +1599,9 @@ function openLibrary() {
   empty.style.display = 'none';
   document.getElementById('libraryOverlay').classList.add('open');
 
-  if (db) {
-    db.collection(SONGS_COLLECTION)
-      .orderBy('updatedAt', 'desc')
-      .get()
+  const ref = userSongsRef();
+  if (ref) {
+    ref.orderBy('updatedAt', 'desc').get()
       .then(snap => renderLibraryList(list, empty, snap.docs.map(d => ({ id: d.id, ...d.data() }))))
       .catch(() => {
         list.innerHTML = '<div style="color:var(--danger);font-family:Space Mono,monospace;font-size:11px;padding:20px 0">Failed to load.</div>';
@@ -1451,10 +1634,12 @@ function renderLibraryList(list, empty, entries) {
         <div class="library-item-meta">${entry.artist ? entry.artist + '  ·  ' : ''}${entry.sections ? entry.sections.length : 0} sections${date ? '  ·  ' + date : ''}</div>
       </div>
       <div class="library-item-actions">
+        <button class="library-share-btn">SHARE</button>
         <button class="library-load-btn">LOAD</button>
         <button class="library-del-btn">✕</button>
       </div>
     `;
+    item.querySelector('.library-share-btn').onclick = e => { e.stopPropagation(); closeLibrary(); shareFromLibrary(entry); };
     item.querySelector('.library-load-btn').onclick = e => { e.stopPropagation(); loadFromLibrary(entry); };
     item.querySelector('.library-del-btn').onclick = e => { e.stopPropagation(); deleteFromLibrary(entry.id); };
     list.appendChild(item);
@@ -1483,8 +1668,9 @@ function loadFromLibrary(entry) {
 
 function deleteFromLibrary(id) {
   if (!confirm('Delete this song?')) return;
-  if (db) {
-    db.collection(SONGS_COLLECTION).doc(id).delete()
+  const ref = userSongsRef();
+  if (ref) {
+    ref.doc(id).delete()
       .then(() => openLibrary())
       .catch(() => alert('Delete failed.'));
   } else {
@@ -1495,6 +1681,7 @@ function deleteFromLibrary(id) {
     } catch(e) {}
   }
 }
+
 function saveData() {
   try {
     localStorage.setItem('songmapper_sections', JSON.stringify(sections));
@@ -1537,9 +1724,9 @@ function loadData() {
 }
 
 renderPartButtons();
-loadData();
 render();
 updateTapLabel();
+// Note: loadData() is called by onAuthStateChanged when user signs in
 </script>
 </body>
 </html>
