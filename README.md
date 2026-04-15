@@ -1,2 +1,2 @@
 # Song-Mapper
-Structure songs
+An app for structuring songs
